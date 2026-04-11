@@ -24,7 +24,7 @@ export class AuthService {
             )
         }
 
-        const user = this.authRepo.create(validate)
+        const user = await this.authRepo.create(validate)
 
         return toAuthResponse(user)
     }

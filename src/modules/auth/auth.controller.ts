@@ -7,7 +7,8 @@ import { AuthService } from "./auth.service"
 
 export class AuthController {
     constructor(private readonly authService: AuthService) {
-        this.authService = authService
+        this.authService = authService,
+        this.register = this.register.bind(this)
     }
 
     async register(req: Request, res: Response, next: NextFunction) {

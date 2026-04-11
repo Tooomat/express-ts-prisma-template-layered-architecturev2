@@ -11,3 +11,5 @@ const service = new AuthService(repo)
 const controller = new AuthController(service)
 
 authRouter.post('/register', controller.register)
+
+export { authRouter }

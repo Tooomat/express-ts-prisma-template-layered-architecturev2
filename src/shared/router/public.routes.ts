@@ -1,8 +1,8 @@
 // src/shared/router/public.routes.ts
 import { Router } from 'express';
+import { authRouter } from '../../modules/auth/auth.routes';
 
 export const publicRouter = Router()
 
 // tidak butuh token
-// publicRouter.post('/auth/login',    authController.login)
-// publicRouter.post('/auth/register', authController.register)
+publicRouter.use('/auth', authRouter)

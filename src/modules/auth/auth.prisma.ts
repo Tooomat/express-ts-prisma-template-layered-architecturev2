@@ -1,11 +1,10 @@
 import { prismaClientPg } from "../../infrastructure/database/postgres"
-import { prismaClientMysql } from "../../infrastructure/database/mysql"
 import { AuthRepository } from "./auth.repository" 
 import { RegisterUserDTO } from "./auth.dto"
 import { User } from "../../generated/prisma/client"
 
 export class PrismaAuthRepository implements AuthRepository {
-  constructor(private prisma: typeof prismaClientPg | typeof prismaClientMysql) {
+  constructor(private prisma: typeof prismaClientPg) {
     this.prisma = prisma
   }
 
@@ -33,7 +32,7 @@ export class PrismaAuthRepository implements AuthRepository {
     })
   }
 
-  async create(data: RegisterUserDTO): Promise<Pick<User, 'id'>> {
+  async create(data: RegisterUserDTO): Promise<Pick<User, 'id' | 'email'>> {
     return this.prisma.user.create({
         data: data,
         select: {
