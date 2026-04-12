@@ -7,24 +7,27 @@ import {
     AuthResponse, 
     toAuthResponse 
 } from "./auth.response"
+import bcrypt from 'bcrypt'
 
 export class AuthService {
-    constructor(private authRepo: AuthRepository) {
+    private authRepo: AuthRepository
+    constructor(authRepo: AuthRepository) {
         this.authRepo = authRepo
     }
     
     async register(req: RegisterUserDTO): Promise<AuthResponse> {
         const validate = Validation.validate(AuthValidation.REGISTER_SCHEMA, req)
+        
         const existingUser = await this.authRepo.findByEmail(validate.email)
-
         if (existingUser) {
-            throw new ResponseError(
-                403,
-                "Email already exists"
-            )
+            throw new ResponseError(403, "Email already exists")
         }
 
-        const user = await this.authRepo.create(validate)
+        const hashedPassword = await bcrypt.hash(validate.password, 10)
+        const user = await this.authRepo.create({
+            email: validate.email,
+            password: hashedPassword // ← simpan yang sudah di-hash
+        })
 
         return toAuthResponse(user)
     }

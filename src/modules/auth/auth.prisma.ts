@@ -4,7 +4,8 @@ import { RegisterUserDTO } from "./auth.dto"
 import { User } from "../../generated/prisma/client"
 
 export class PrismaAuthRepository implements AuthRepository {
-  constructor(private prisma: typeof prismaClientPg) {
+  private prisma: typeof prismaClientPg
+  constructor(prisma: typeof prismaClientPg) {
     this.prisma = prisma
   }
 

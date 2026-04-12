@@ -6,8 +6,9 @@ import {
 import { AuthService } from "./auth.service"
 
 export class AuthController {
-    constructor(private readonly authService: AuthService) {
-        this.authService = authService,
+    private readonly authService: AuthService
+    constructor(authService: AuthService) {
+        this.authService = authService
         this.register = this.register.bind(this)
     }
 
