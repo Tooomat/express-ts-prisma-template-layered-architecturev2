@@ -11,7 +11,7 @@ import helmet from "helmet";
 import { filterXSS } from 'xss'
 import hpp from "hpp"
 import { redis } from "../../infrastructure/redis";
-import { securityLogger } from "../utils/logging.utils";
+import { securityLogger } from "../utils/logging";
 
 const isDev = config.NODE_ENV === 'development'
 const isTest = config.NODE_ENV === 'test'

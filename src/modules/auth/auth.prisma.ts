@@ -1,9 +1,9 @@
 import { prismaClientPg } from "../../infrastructure/database/postgres"
-import { AuthRepository } from "./auth.repository" 
+import { IAuthRepository } from "./auth.repository.interface" 
 import { RegisterUserDTO } from "./auth.dto"
 import { User } from "../../generated/prisma/client"
 
-export class PrismaAuthRepository implements AuthRepository {
+export class PrismaAuthRepository implements IAuthRepository {
   private prisma: typeof prismaClientPg
   constructor(prisma: typeof prismaClientPg) {
     this.prisma = prisma

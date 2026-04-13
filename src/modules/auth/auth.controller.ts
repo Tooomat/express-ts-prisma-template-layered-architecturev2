@@ -4,6 +4,7 @@ import {
   success_handler_without_data
 } from "../../shared/response/web.response"
 import { AuthService } from "./auth.service"
+import { securityLogger } from "../../shared/utils/logging"
 
 export class AuthController {
     private readonly authService: AuthService
@@ -14,7 +15,8 @@ export class AuthController {
 
     async register(req: Request, res: Response, next: NextFunction) {
         try {
-            await this.authService.register(req.body) 
+            const result = await this.authService.register(req.body) 
+            securityLogger.registered(result.id, req.ip ?? 'unknown')
             return success_handler_without_data(res, "register success", 201)
         } catch (e) {
             next(e)

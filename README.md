@@ -600,7 +600,7 @@ GET /api/users?role=user&role=admin
 
 Tersedia middleware CSRF, aktif di production untuk request yang tidak menggunakan Bearer token.
 
-### 7. Request Logging
+### 7. Request Logging format
 
 Setiap request di-log dengan `requestId` unik untuk tracing:
 
@@ -701,15 +701,20 @@ save ""                # Nonaktifkan RDB persistence (untuk cache saja)
 
 ### Redis Database Index
 
-Disarankan pisahkan penggunaan per database index:
+Disarankan gunakan SATU database (biasanya DB 0):
 
 | Index | Kegunaan |
-|---|---|
-| `0` | Rate limiting |
-| `1` | Session / Auth token |
-| `2` | Cache data |
-| `3` | Queue / lainnya |
+|-------|----------|
+| `0`   | Rate limiting, cache, queue, Session / Auth token |
 
+Pakai prefix untuk pemisahan :
+
+```
+${APP_NAME}:rl:ip:192.168.1.1
+sess:user:123
+cache:product:1
+queue:email
+```
 ---
 
 ## Logging
@@ -727,7 +732,9 @@ Menggunakan **Winston** dengan format JSON.
 
 ### Security Logger
 
-File `src/shared/utils/logging.utils.ts` menyediakan logger khusus untuk event keamanan:
+File `src/shared/utils/logging/logging.utils.ts` menyediakan logger khusus untuk event keamanan:
+
+anda juga bisa menambahkan sendiri logging buatan anda sendiri
 
 ```typescript
 import { securityLogger } from '../utils/logging.utils'
@@ -756,9 +763,45 @@ securityLogger.invalidToken(req.ip, req.url, "Token expired", requestId)
 
 > **Privacy:** Email di-hash (SHA-256) dan di-mask sebelum di-log untuk compliance (GDPR/PII).
 
+### Log Output Format
+
+Setiap error yang tertangani akan menghasilkan log dengan format berikut:
+
+**Expected business error (4xx):**
+```json
+{
+  "type": "security:access_denied",
+  "requestId": "uuid",
+  "method": "POST",
+  "url": "/api/auth/register",
+  "statusCode": 403,
+  "reason": "Email already exists",
+  "origin": "AuthService.register (src/modules/auth/auth.service.ts:18:15)"
+}
+```
+
+**Unexpected error (5xx):**
+```json
+{
+  "type": "error:unhandled",
+  "requestId": "uuid",
+  "method": "POST",
+  "url": "/api/auth/register",
+  "message": "Cannot read properties of undefined",
+  "origin": "PrismaAuthRepository.create (src/modules/auth/auth.prisma.ts:42:8)",
+  "stack": "TypeError: Cannot read...\n    at PrismaAuthRepository..."
+}
+```
+
+Field `origin` menunjukkan lokasi spesifik di kode kamu tempat error terjadi,
+format: `ClassName.methodName (path/to/file.ts:line:col)`.
+Error middleware hanya menghasilkan **satu log entry per error** untuk menghindari duplicate log.
+
 ---
 
 ## Error Handling
+
+untuk error handling menggunakan pattern throw + middleware, serta bisa menggunakan Domain-specific error classes
 
 ### ResponseError
 
@@ -775,6 +818,21 @@ if (existingUser) {
 if (!user) {
     throw new ResponseError(404, "User not found")
 }
+```
+
+Atau juga bisa menggunakan Domain-specific error classes:
+```typescript
+import { ForbiddenError, NotFoundError } from "../../shared/errors/service-response.error"
+
+// Di dalam service
+if (existingUser) {
+    throw new ForbiddenError("Email already exists")
+}
+
+if (!user) {
+    throw new NotFoundError("User not found")
+}
+
 ```
 
 ### Status Code yang Tersedia
@@ -804,30 +862,31 @@ Menggunakan **Zod** untuk validasi input. Schema ada di `src/shared/validation/`
 ### Membuat Schema Baru
 
 ```typescript
-// src/shared/validation/user.validation.ts
-import { z } from "zod"
+// src/modules/auth/auth.validation.ts
+import { ZodType, z } from "zod";
 
-export class UserValidation {
-    static readonly CREATE_SCHEMA = z.object({
-        email: z.string().email(),
-        password: z.string().min(8).max(100),
-        name: z.string().min(1).max(100)
-    })
-
-    static readonly UPDATE_SCHEMA = z.object({
-        name: z.string().min(1).max(100).optional(),
+export class AuthValidation {
+    static readonly REGISTER_SCHEMA = z.object({
+        email: z
+            .string()
+            .email(),
+        password: z
+            .string()
+            .min(8)
     })
 }
+// Export type dari schema
+export type RegisterRequest = z.infer<typeof AuthValidation.REGISTER_SCHEMA>;
 ```
 
 ### Cara Pakai di Service
 
 ```typescript
-import { Validation } from '../../shared/validation/validation'
-import { UserValidation } from '../../shared/validation/user.validation'
+import { AuthValidation } from "./auth.validation"
+import { Validation } from "../../shared/validation/validation"
 
 async createUser(req: CreateUserDTO) {
-    const validate = Validation.validate(UserValidation.CREATE_SCHEMA, req)
+    const validate = Validation.validate(AuthValidation.REGISTER_SCHEMA, req)
     // `validate` sudah type-safe dan tervalidasi
 }
 ```
@@ -849,6 +908,7 @@ src/modules/product/
 ├── product.dto.ts
 ├── product.response.ts
 └── product.routes.ts
+└── product.validation.ts
 ```
 
 ### 2. Tambah model di Prisma schema
@@ -866,10 +926,11 @@ model Product {
 }
 ```
 
-### 3. Buat migration
+### 3. Buat migration dan generate
 
 ```bash
 npm run prisma:migrate:dev
+npm run prisma:generate:dev
 ```
 
 ### 4. Buat interface Repository

@@ -1,8 +1,8 @@
 import { ResponseError } from "../../shared/errors/service-response.error"
-import { AuthValidation } from "../../shared/validation/auth.validation"
+import { AuthValidation } from "./auth.validation"
 import { Validation } from "../../shared/validation/validation"
 import { RegisterUserDTO } from "./auth.dto"
-import { AuthRepository } from "./auth.repository"
+import { IAuthRepository } from "./auth.repository.interface"
 import { 
     AuthResponse, 
     toAuthResponse 
@@ -10,8 +10,8 @@ import {
 import bcrypt from 'bcrypt'
 
 export class AuthService {
-    private authRepo: AuthRepository
-    constructor(authRepo: AuthRepository) {
+    private authRepo: IAuthRepository
+    constructor(authRepo: IAuthRepository) {
         this.authRepo = authRepo
     }
     
