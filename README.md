@@ -105,11 +105,11 @@ Request
 │   │   └── auth/            # Contoh module (auth)
 │   │       ├── auth.controller.ts
 │   │       ├── auth.service.ts
-│   │       ├── auth.repository.ts   # Interface
-│   │       ├── auth.prisma.ts       # Implementasi repository
-│   │       ├── auth.dto.ts          # Data Transfer Object
-│   │       ├── auth.response.ts     # Response transformer
-│   │       └── auth.routes.ts       # Route definitions
+│   │       ├── auth.repository.interface.ts   # Interface
+│   │       ├── auth.prisma.ts                 # Implementasi repository
+│   │       ├── auth.dto.ts                    # Data Transfer Object
+│   │       ├── auth.response.ts               # Response transformer
+│   │       └── auth.routes.ts                 # Route definitions
 │   │
 │   ├── shared/
 │   │   ├── errors/
@@ -263,7 +263,7 @@ DB_NAME=database_name
 
 ---
 
-## Setup & Run (Local)
+## Setup & Run & Test (LOCAL)
 
 ### 1. Clone Repository
 
@@ -315,6 +315,9 @@ npm run dev
 ```
 
 Server berjalan di `http://localhost:3000`
+
+### Testing (LOCAL)
+
 
 ---
 
@@ -387,17 +390,23 @@ docker compose -f docker-compose.prod.yml exec app npx prisma migrate deploy
 
 ---
 
-## Testing
+## Testing (LOCAL & DOCKER)
 
 Template menggunakan **Jest** + **Supertest** untuk E2E testing.
 
-### Setup Test Environment
+### Setup Test Environment 
 
+if `local`:
 ```bash
 cp .env.example .env.test.local
 ```
 
-Edit `.env.test.local`:
+if use `docker`:
+```bash
+cp .env.example .env.test.docker
+```
+
+Edit `.env.test.local` or `.env.test.docker`:
 
 ```env
 DOCKER=false
