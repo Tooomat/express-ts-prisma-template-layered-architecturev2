@@ -13,22 +13,38 @@ export class PrismaMysqlService {
   private isConnected = false
 
   constructor(private readonly logger: WinstonLoggerService) {
+    const databaseUrl = process.env.DATABASE_URL;
+    const isProduction = process.env.NODE_ENV === 'production'
+
+    if (!databaseUrl) {
+        throw new Error('DATABASE_URL is not defined')
+    }
+    
     const adapterMysql = new PrismaMariaDb({
         host: env.config.DB_HOST,
         port: env.config.DB_PORT,
         user: env.config.DB_USER,
         password: env.config.DB_PASSWORD,
         database: env.config.DB_NAME,
+        // --- Konfigurasi Pool ---
+        connectionLimit: parseInt(process.env.DB_POOL_MAX || '10', 10), // Max koneksi
+        connectTimeout: parseInt(process.env.DB_POOL_TIMEOUT || '5000', 10), // Timeout koneksi awal
+        idleTimeout: parseInt(process.env.DB_IDLE_TIMEOUT || '10000', 10), // Timeout koneksi idle
     })
 
     this.client = new PrismaClient({
       adapter: adapterMysql,
-      log: [
-        { emit: "event", level: "error" },
-        { emit: "event", level: "warn" },
-        { emit: "event", level: "info" },
-        // ...(isDev ? [{ emit: "event", level: "query" }] : []),
-      ] as Prisma.LogDefinition[],
+      log: isProduction
+        ? [
+            { emit: 'event', level: 'error' },
+            { emit: 'event', level: 'warn' },
+        ]
+        : [
+            { emit: 'event', level: 'error' },
+            { emit: 'event', level: 'warn' },
+            { emit: 'event', level: 'info' },
+            // { emit: 'event', level: 'query' }, // debug query di local
+        ] as Prisma.LogDefinition[],
     })
 
     this.setupListeners()

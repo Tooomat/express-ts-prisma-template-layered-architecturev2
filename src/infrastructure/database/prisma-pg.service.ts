@@ -2,6 +2,7 @@ import { PrismaClient, Prisma } from "../../generated/prisma/client";
 import { PrismaPg } from '@prisma/adapter-pg';
 import { WinstonLoggerService } from "../logging/winston-logging.service";
 import * as env from "../../config/env";
+import { Pool } from "pg";
 
 const isDev = env.config.NODE_ENV === "development"
 
@@ -11,18 +12,38 @@ export class PrismaPgService {
   private isConnected = false
 
   constructor(private readonly logger: WinstonLoggerService) {
-    const adapter = new PrismaPg({
-      connectionString: env.config.DATABASE_URL,
-    });
+
+    const databaseUrl = process.env.DATABASE_URL;
+    const isProduction = process.env.NODE_ENV === 'production'
+
+    if (!databaseUrl) {
+        throw new Error('DATABASE_URL is not defined')
+    }
+
+    // 1. Inisialisasi Pool dari 'pg' terlebih dahulu
+    const pool = new Pool({
+        connectionString: databaseUrl,
+        max: parseInt(process.env.DB_POOL_MAX || '10', 10),
+        connectionTimeoutMillis: parseInt(process.env.DB_POOL_TIMEOUT || '5000', 10), //5000ms atau 5s
+        idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '10000', 10), // 10000ms atau 10s
+        idle_in_transaction_session_timeout: parseInt(process.env.DB_IDLE_TRANSACTION_TIMEOUT || '15000', 10), // batas transaksi nyangkut
+    })
+
+    const adapter = new PrismaPg(pool)
 
     this.client = new PrismaClient({
       adapter,
-      log: [
-        { emit: "event", level: "error" },
-        { emit: "event", level: "warn" },
-        { emit: "event", level: "info" },
-        // ...(isDev ? [{ emit: "event", level: "query" }] : []),
-      ] as Prisma.LogDefinition[],
+      log: isProduction
+        ? [
+            { emit: 'event', level: 'error' },
+            { emit: 'event', level: 'warn' },
+        ]
+        : [
+            { emit: 'event', level: 'error' },
+            { emit: 'event', level: 'warn' },
+            { emit: 'event', level: 'info' },
+            // { emit: 'event', level: 'query' }, // debug query di local
+        ] as Prisma.LogDefinition[],
     })
 
     this.setupListeners()
